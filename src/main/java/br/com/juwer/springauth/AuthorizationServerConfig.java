@@ -27,11 +27,19 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
     @Override
     public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
         clients.inMemory()
+                // Password Credentials
                 .withClient("algafood-web")
                 .secret(passwordEncoder.encode("web123"))
                 .authorizedGrantTypes("password", "refresh_token")
                 .scopes("write", "read")
-                .accessTokenValiditySeconds(15) // seis horas (padrão é 12)
+                .accessTokenValiditySeconds(60 * 60 * 6) // seis horas (padrão é 12)
+                .refreshTokenValiditySeconds(43200 * 2)
+            .and()
+                // Client Credentials
+                .withClient("backend2")
+                .secret(passwordEncoder.encode("123"))
+                .authorizedGrantTypes("client_credentials")
+                .scopes("write", "read")
             .and()
                 .withClient("check_token")
                 .secret(passwordEncoder.encode("check123"));
@@ -41,7 +49,8 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
         endpoints
             .authenticationManager(authenticationManager)
-                .userDetailsService(userDetailsService);
+            .userDetailsService(userDetailsService)
+            .reuseRefreshTokens(false);
     }
 
     @Override
