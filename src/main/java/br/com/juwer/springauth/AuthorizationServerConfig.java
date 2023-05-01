@@ -27,19 +27,29 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
     @Override
     public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
         clients.inMemory()
-                // Password Credentials
+            // Password Credentials
                 .withClient("algafood-web")
                 .secret(passwordEncoder.encode("web123"))
                 .authorizedGrantTypes("password", "refresh_token")
                 .scopes("write", "read")
                 .accessTokenValiditySeconds(60 * 60 * 6) // seis horas (padrão é 12)
-                .refreshTokenValiditySeconds(43200 * 2)
+                .refreshTokenValiditySeconds(43200 * 2) // 24 horas
+
+            //Authorization Code Grant Type
             .and()
-                // Client Credentials
+                .withClient("food-analytics")
+                .secret(passwordEncoder.encode("food123"))
+                .authorizedGrantTypes("authorization_code")
+                .scopes("write", "read")
+                .redirectUris("http://application-test")
+
+            // Client Credentials
+            .and()
                 .withClient("backend2")
                 .secret(passwordEncoder.encode("123"))
                 .authorizedGrantTypes("client_credentials")
                 .scopes("write", "read")
+
             .and()
                 .withClient("check_token")
                 .secret(passwordEncoder.encode("check123"));
@@ -56,6 +66,6 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
     @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
 //        security.checkTokenAccess("isAuthenticated()");
-        security.checkTokenAccess("permitAll()");
+        security.checkTokenAccess("permitAll()"); // não precisa passar senha para verificar token
     }
 }
