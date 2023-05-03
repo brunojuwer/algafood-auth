@@ -10,6 +10,10 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.A
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.CompositeTokenGranter;
+import org.springframework.security.oauth2.provider.TokenGranter;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableAuthorizationServer
@@ -35,10 +39,10 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
                 .accessTokenValiditySeconds(60 * 60 * 6) // seis horas (padrão é 12)
                 .refreshTokenValiditySeconds(43200 * 2) // 24 horas
 
-            //Authorization Code Grant Type
+            //Authorization Code Grant Type PKCE
             .and()
                 .withClient("food-analytics")
-                .secret(passwordEncoder.encode("food123"))
+                .secret(passwordEncoder.encode(""))
                 .authorizedGrantTypes("authorization_code")
                 .scopes("write", "read")
                 .redirectUris("http://localhost:4200")
@@ -50,6 +54,13 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
                 .authorizedGrantTypes("client_credentials")
                 .scopes("write", "read")
 
+            // Implicit Grant
+            .and()
+                .withClient("webadmin")
+                .authorizedGrantTypes("implicit")
+                .scopes("write", "read")
+                .redirectUris("http://localhost:4200")
+
             .and()
                 .withClient("check_token")
                 .secret(passwordEncoder.encode("check123"));
@@ -60,12 +71,24 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
         endpoints
             .authenticationManager(authenticationManager)
             .userDetailsService(userDetailsService)
-            .reuseRefreshTokens(false);
+            .reuseRefreshTokens(false)
+            .tokenGranter(tokenGranter(endpoints));
     }
 
     @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
-//        security.checkTokenAccess("isAuthenticated()");
-        security.checkTokenAccess("permitAll()"); // não precisa passar senha para verificar token
+        security.checkTokenAccess("permitAll()") // não precisa passar senha para verificar token
+                .allowFormAuthenticationForClients();
+    }
+
+    private TokenGranter tokenGranter(AuthorizationServerEndpointsConfigurer endpoints) {
+        var pkceAuthorizationCodeTokenGranter = new PkceAuthorizationCodeTokenGranter(endpoints.getTokenServices(),
+                endpoints.getAuthorizationCodeServices(), endpoints.getClientDetailsService(),
+                endpoints.getOAuth2RequestFactory());
+
+        var granters = Arrays.asList(
+                pkceAuthorizationCodeTokenGranter, endpoints.getTokenGranter());
+
+        return new CompositeTokenGranter(granters);
     }
 }
